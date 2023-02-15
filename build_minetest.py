@@ -1,7 +1,7 @@
 """
 Compile minetest for windows with luasocket.
 
-Copyright (C) 2019 Robert Lieback <robertlieback@zetabyte.de>
+Copyright (C) 2019 Robert Lieback <robertlieback@zetabyte.de>, modified 2023 David Mosbach <david.mosbach@live.de>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -45,7 +45,7 @@ if len(sys.argv) > 1:
     elif "x64" in sys.argv:
         ARCH = "x64"
     else:
-        ARCH = "x86"
+        ARCH = "x64"
     if "--force-rebuild" in sys.argv:
         logger.info("Forcing rebuild")
         FORCE_REBUILD = True
@@ -54,7 +54,8 @@ if len(sys.argv) > 1:
     else:
         FORCE_REBUILD = False
 else:
-    ARCH = "x86"
+    ARCH = "x64"
+
 logger.info(f"Set CPU architecture to {ARCH}")
 
 join = path.join
@@ -82,7 +83,7 @@ if not path.isdir(join(BUILD_TOOLS, "vcpkg")):
     logger.info("vcpkg - Download vcpkg from github")
     ret = run(
         [
-            "git", "clone", "--single-branch", "--branch", "2020.11", "-c", "advice.detachedHead=false",
+            "git", "clone", "--single-branch", "--branch", "2023.01.09", "-c", "advice.detachedHead=false",
             "https://github.com/microsoft/vcpkg.git", join(BUILD_TOOLS, "vcpkg")
         ],
     )
@@ -105,7 +106,7 @@ if not path.isdir(join(BUILD_TOOLS, "vcpkg", "buildtrees", "sqlite3", ARCH+"-win
     ret = run(
         [VCPKG, "install",
          "irrlicht", "zlib", "curl[winssl]", "openal-soft", "libvorbis", "libogg", "sqlite3", "freetype", "luajit",
-         "gettext", "--triplet", f"{ARCH}-windows", "--no-binarycaching"],  # gettext for translations
+         "gettext", 'opengl', 'libpqxx', 'gmp', 'zstd', "--triplet", f"{ARCH}-windows", "--no-binarycaching"],  # gettext for translations
         cwd=join(BUILD_TOOLS, "vcpkg")
     )
     if ret.returncode != 0:
@@ -174,9 +175,15 @@ else:
 # minetest
 if not os.path.isdir(join(BUILD, "minetest")):
     logger.info("minetest - Cloning from stable repo")
-    ret = run(["git", "clone", "--single-branch", "--branch", "5.4.0", "-c", "advice.detachedHead=false", "https://github.com/minetest/minetest.git", join(BUILD, "minetest")])
+    ret = run(["git", "clone", "--single-branch", "--branch", "5.6.1", "-c", "advice.detachedHead=false", "https://github.com/minetest/minetest.git", join(BUILD, "minetest")])
     if ret.returncode != 0:
         raise Exception("Minetest - Couldn't clone from stable repo")
+    # irrlichtmt
+    logger.info("irrlichMT - Cloning from stable repo")
+    ret = run(['git', 'clone', '--single-branch', '--branch', '1.9.0mt8', '--depth', '1', 'https://github.com/minetest/irrlicht.git', join(BUILD, 'minetest', 'lib', 'irrlichtmt')])
+    if ret.returncode != 0:
+        raise Exception("irrlichtMT - Couldn't clone from stable repo")
+
 
 # minetest - compile
 if not path.isfile(join(BUILD, "minetest", "bin", "Release_" + ARCH, "minetest.exe")):
@@ -205,6 +212,7 @@ if not path.isfile(join(BUILD, "minetest", "bin", "Release_" + ARCH, "minetest.e
             f"-DCMAKE_TOOLCHAIN_FILE={BUILD_TOOLS}/vcpkg/scripts/buildsystems/vcpkg.cmake",
             "-DCMAKE_BUILD_TYPE=Release",
             "-DENABLE_GETTEXT=1",
+            f'IRRLICHTMT_BUILD_DIR={BUILD}/minetest/lib/irrlichtmt/include',
             f"-DGETTEXT_MSGFMT={BUILD_TOOLS}/gettext_tools/bin/msgfmt.exe",
             # f"-DGETTEXT_DLL={BUILD_TOOLS}/vcpkg/buildtrees/gettext/{ARCH}-windows-rel/libintl.dll",
             f"-DGETTEXT_ICONV_DLL={BUILD_TOOLS}/vcpkg/buildtrees/libiconv/{ARCH}-windows-rel/libiconv.dll",
