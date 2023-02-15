@@ -4,7 +4,7 @@ This build_minetest script downloads all source codes and compiles them to Minet
 
 ## Requirements 
 
-- Visual Studio 2019 Build Tools
+- Visual Studio 2019 Build Tools (including C++ packages and English language pack)
 - git
 - python
 
@@ -12,7 +12,11 @@ This build_minetest script downloads all source codes and compiles them to Minet
 
 Place this file in an empty directory and run it.
 
-Run: python build_minetest.py <x86/x64>
+Run:
+```
+python build_minetest.py <x86/x64>
+```
+Default is `x64`.
 
 ## LICENSE
 
